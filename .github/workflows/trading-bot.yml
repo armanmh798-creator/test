@@ -1,4 +1,4 @@
-name: Trading Bot - First Test
+name: Trading Bot - Test Signal
 
 on:
   workflow_dispatch:
@@ -11,18 +11,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get bot files
+      - name: Checkout bot
         uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Install basic dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
 
       - name: Check bot files
         run: |
@@ -31,14 +26,16 @@ jobs:
           python -m py_compile run.py engine.py
           echo "Bot files OK"
 
-      - name: Check secrets
+      - name: Send test notification
         env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
-          test -n "$GOOGLE_API_KEY"
           test -n "$NTFY_TOPIC"
-          echo "Secrets OK"
+          curl -f -X POST \
+            -H "Title: Trading Bot TEST" \
+            -H "Priority: high" \
+            -d "Test successful! Notification system is working." \
+            "https://ntfy.sh/$NTFY_TOPIC"
 
-      - name: Finish test
-        run: echo "First test passed!"
+      - name: Finish
+        run: echo "Test completed successfully!"
