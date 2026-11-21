@@ -1,0 +1,44 @@
+name: Trading Bot - First Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get bot files
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install basic dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Check bot files
+        run: |
+          test -f run.py
+          test -f engine.py
+          python -m py_compile run.py engine.py
+          echo "Bot files OK"
+
+      - name: Check secrets
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          test -n "$GOOGLE_API_KEY"
+          test -n "$NTFY_TOPIC"
+          echo "Secrets OK"
+
+      - name: Finish test
+        run: echo "First test passed!"
