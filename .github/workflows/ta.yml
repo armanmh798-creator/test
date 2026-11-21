@@ -1,0 +1,47 @@
+name: TradingAgents
+on:
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch:
+    inputs:
+      asset:
+        description: "ALL یا یک دارایی (BTC, ETH, Gold, ...)"
+        default: "ALL"
+      agents:
+        description: "1 = تیم کامل | 0 = فقط تکنیکال"
+        default: "1"
+      search_min:
+        description: "حداکثر دقیقهٔ جست‌وجو"
+        default: "55"
+concurrency:
+  group: tradingagents
+  cancel-in-progress: false
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: ta-data-${{ github.run_id }}
+          restore-keys: ta-data-
+      - run: git clone -q --depth 1 https://github.com/TauricResearch/TradingAgents
+      - run: pip install -q ./TradingAgents yfinance requests pandas numpy
+      - run: python run.py
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          TA_ASSET: ${{ github.event.inputs.asset || 'ALL' }}
+          TA_AGENTS: ${{ github.event.inputs.agents || '1' }}
+          TA_SEARCH_MIN: ${{ github.event.inputs.search_min || '55' }}
+          TA_DATA: ${{ github.workspace }}/data
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: data
+          key: ta-data-${{ github.run_id }}
