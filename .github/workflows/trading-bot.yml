@@ -1,39 +1,49 @@
 name: Trading Bot - Real Crypto Scan
 
 on:
-workflow_dispatch:
+  workflow_dispatch:
+  # بعد از اولین اجرای موفق، دو خط زیر را از حالت کامنت دربیار (هر ساعت):
+  # schedule:
+  #   - cron: "7 * * * *"
 
 permissions:
-contents: read
+  contents: read
+
+concurrency:
+  group: trading-bot
+  cancel-in-progress: false
 
 jobs:
-scan:
-runs-on: ubuntu-latest
-timeout-minutes: 12
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout bot
+        uses: actions/checkout@v4
 
-steps:
-  - name: Checkout bot
-    uses: actions/checkout@v4
-  - name: Setup Python
-    uses: actions/setup-python@v5
-    with:
-      python-version: '3.11'
-  - name: Install TradingAgents
-    run: |
-      git clone https://github.com/TauricResearch/TradingAgents.git TradingAgents
-      cd TradingAgents
-      git checkout c454491
-      pip install .
-  - name: Install bot dependencies
-    run: |
-      pip install yfinance pandas numpy requests pytz feedparser
-  - name: Run real crypto scan
-    env:
-      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-      TA_ASSET: ALL
-      TA_REPO_DIR: ${{ github.workspace }}/TradingAgents
-      PYTHONUNBUFFERED: '1'
-    run: |
-      python -m py_compile run.py engine.py
-      python run.py
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install TradingAgents
+        run: |
+          git clone https://github.com/TauricResearch/TradingAgents.git TradingAgents
+          cd TradingAgents
+          git checkout c454491
+          pip install .
+
+      - name: Install bot dependencies
+        run: |
+          pip install yfinance pandas numpy requests pytz feedparser
+
+      - name: Run real crypto scan
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          TA_ASSET: BTC
+          TA_REPO_DIR: ${{ github.workspace }}/TradingAgents
+          PYTHONUNBUFFERED: '1'
+        run: |
+          python -m py_compile run.py engine.py
+          python run.py
