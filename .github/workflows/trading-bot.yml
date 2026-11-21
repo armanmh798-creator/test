@@ -1,41 +1,39 @@
-name: Trading Bot - Test Signal
+name: Trading Bot - Real Crypto Scan
 
 on:
-  workflow_dispatch:
+workflow_dispatch:
 
 permissions:
-  contents: read
+contents: read
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+scan:
+runs-on: ubuntu-latest
+timeout-minutes: 12
 
-    steps:
-      - name: Checkout bot
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Check bot files
-        run: |
-          test -f run.py
-          test -f engine.py
-          python -m py_compile run.py engine.py
-          echo "Bot files OK"
-
-      - name: Send test notification
-        env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-        run: |
-          test -n "$NTFY_TOPIC"
-          curl -f -X POST \
-            -H "Title: Trading Bot TEST" \
-            -H "Priority: high" \
-            -d "Test successful! Notification system is working." \
-            "https://ntfy.sh/$NTFY_TOPIC"
-
-      - name: Finish
-        run: echo "Test completed successfully!"
+steps:
+  - name: Checkout bot
+    uses: actions/checkout@v4
+  - name: Setup Python
+    uses: actions/setup-python@v5
+    with:
+      python-version: '3.11'
+  - name: Install TradingAgents
+    run: |
+      git clone https://github.com/TauricResearch/TradingAgents.git TradingAgents
+      cd TradingAgents
+      git checkout c454491
+      pip install .
+  - name: Install bot dependencies
+    run: |
+      pip install yfinance pandas numpy requests pytz feedparser
+  - name: Run real crypto scan
+    env:
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      TA_ASSET: ALL
+      TA_REPO_DIR: ${{ github.workspace }}/TradingAgents
+      PYTHONUNBUFFERED: '1'
+    run: |
+      python -m py_compile run.py engine.py
+      python run.py
